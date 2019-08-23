@@ -53,22 +53,37 @@ namespace AsciiConverter
                 
                 var index = 1;
                 var modifiedCounter = 0;
+                var errorsCount = 0;
                 foreach (var file in files)
                 {
                     logFile.WriteLine($"{DateTime.Now:g}: Processing {file} ({index++}/{files.Count})...");
-                    using (var mp3File = TagLib.File.Create(file))
+                    try
                     {
-                        var modified = ProcessTag(logFile, mp3File.Tag);
-                        if (modified)
+                        using (var mp3File = TagLib.File.Create(file))
                         {
-                            mp3File.Save();
-                            modifiedCounter++;
+                            var modified = ProcessTag(logFile, mp3File.Tag);
+                            if (modified)
+                            {
+                                mp3File.Save();
+                                modifiedCounter++;
+                            }
                         }
                     }
+                    catch (CorruptFileException)
+                    {
+                        logFile.WriteLine($"{DateTime.Now:g}: File is corrupt: {file}");
+                        errorsCount++;
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        logFile.WriteLine($"{DateTime.Now:g}: Access denied: {file}");
+                        errorsCount++;
+                    }
+
                     logFile.Flush();
                 }
                 
-                logFile.WriteLine($"{DateTime.Now:g}: Completed. Total files modified: {modifiedCounter} out of {files.Count}.");
+                logFile.WriteLine($"{DateTime.Now:g}: Completed. Total files modified: {modifiedCounter} out of {files.Count}. Errors: {errorsCount}.");
                 logFile.WriteLine();
                 logFile.WriteLine();
             }
